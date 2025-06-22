@@ -102,21 +102,13 @@ export const updateCategoryController = async (req, res) => {
     }
     // get new cat
     const { updatedCategory } = req.body;
-    // find product with this category id
-    const products = await productModel.find({ category: category._id });
-    // update producty category
-    for (let i = 0; i < products.length; i++) {
-      const product = products[i];
-      product.category = updatedCategory;
-      await product.save();
-    }
     if (updatedCategory) category.category = updatedCategory;
 
     // save
     await category.save();
     res.status(200).send({
       success: true,
-      message: "Catgeory Updated Successfully",
+      message: "Category Updated Successfully",
     });
   } catch (error) {
     console.log(error);
@@ -129,7 +121,7 @@ export const updateCategoryController = async (req, res) => {
     }
     res.status(500).send({
       success: false,
-      message: "Error In UPDATE CATEGPORY API",
+      message: "Error In UPDATE CATEGORY API",
       error,
     });
   }

@@ -35,7 +35,7 @@ export const getAllProductsController = async (req, res) => {
 // GET TOP PRODUCT
 export const getTopProductsController = async (req, res) => {
   try {
-    const products = await productModel.find({}).sort({ rating: -1 }).limit(3);
+    const products = await productModel.find({}).sort({ rating: -1 }).limit(3); //rating -1 => (-1 is decending order not the actual rating)
     res.status(200).send({
       success: true,
       message: "top 3 products",
