@@ -7,6 +7,7 @@ import {
   getMyOrdersCotroller,
   paymetsController,
   singleOrderDetrailsController,
+  cancelOrderController,
 } from "../controllers/orderController.js";
 
 const router = express.Router();
@@ -32,6 +33,9 @@ router.get("/admin/get-all-orders", isAuth, isAdmin, getAllOrdersController);
 
 // change order status
 router.put("/admin/order/:id", isAuth, isAdmin, changeOrderStatusController);
+
+//cancel order
+router.delete("/admin/order/:id", isAuth, isAdmin, cancelOrderController)
 
 // ====================================================================
 
