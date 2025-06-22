@@ -1,6 +1,6 @@
 import userModel from "../models/userModel.js";
 import cloudinary from "cloudinary";
-import { getDataUri } from "../utils/Features.js";
+import { getDataUri } from "../utils/features.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 
