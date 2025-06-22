@@ -207,3 +207,42 @@ export const changeOrderStatusController = async (req, res) => {
     });
   }
 };
+
+export const cancelOrderController = async (req, res) => {
+  try {
+    //get order
+    const order = await orderModel.findById(req.params.id);
+
+    //validate
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: "order not found",
+      });
+    }
+
+    order.orderStatus = "cancel";
+    order.cancelInfo.cancelAt = Date.now();
+    order.cancelInfo.cancelReason = req.body.cancelReason;
+
+    await order.save();
+    res.status(200).send({
+      success: true,
+      message: "order canceled",
+    });
+  } catch (error) {
+    console.log(error);
+    // cast error ||  OBJECT ID
+    if (error.name === "CastError") {
+      return res.status(500).send({
+        success: false,
+        message: "Invalid Id",
+      });
+    }
+    res.status(500).send({
+      success: false,
+      message: "Error In Get CANCEL Products API",
+      error,
+    });
+  }
+};

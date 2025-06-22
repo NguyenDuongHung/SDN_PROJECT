@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema(
         },
         image: {
           type: String,
-          required: [true, "product image is require"],
+          required: [true, "product image is require"], //img url from cloudinary take from product api
         },
         product: {
           type: mongoose.Schema.Types.ObjectId,
@@ -74,10 +74,15 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["processing", "shipped", "deliverd"],
+      enum: ["processing", "shipped", "deliverd","cancel"],
       default: "processing",
     },
     deliverdAt: Date,
+    cancelInfo:
+      {
+        cancelAt:Date,
+        cancelReason:{type:String}
+      }
   },
   { timestamps: true }
 );

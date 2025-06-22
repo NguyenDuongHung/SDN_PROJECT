@@ -35,19 +35,12 @@ router.put("/:id", isAuth, isAdmin, updateProductController);
 
 // UPDATE PRODUCT IMAGE
 router.put(
-  "/image/:id",
-  isAuth,
-  isAdmin,
-  singleUpload,
-  updateProductImageController
+  "/image/:id", isAuth, isAdmin, singleUpload, updateProductImageController
 );
 
 // delete product image
 router.delete(
-  "/delete-image/:id",
-  isAuth,
-  isAdmin,
-  deleteProductImageController
+  "/delete-image/:id", isAuth, isAdmin, deleteProductImageController
 );
 
 // delete product
