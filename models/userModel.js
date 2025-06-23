@@ -49,12 +49,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "user",
     },
-    resetOTP: {
+    status:{
+      type: String,
+      enum: ['pending', 'verified'], 
+      default: 'pending',
+    },
+    otp: {
       type: String,
     },
-    resetOTPExpiry: {
+    OTPExpiry: {
       type: Date,
     },
+    registExpiry:{
+      type:Date,
+      expires: 0,//delete doc when otp time run out
+    }
   },
   { timestamps: true }
 );
@@ -64,11 +73,18 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 10);
+  if (!this.otp) return next();
+  this.otp = await bcrypt.hash(this.otp, 10);
 });
 
 // compare function
 userSchema.methods.comparePassword = async function (plainPassword) {
   return await bcrypt.compare(plainPassword, this.password);
+};
+
+// compare function
+userSchema.methods.compareOTP = async function (OTP) {
+  return await bcrypt.compare(OTP, this.otp);
 };
 
 //JWT TOKEN
@@ -78,5 +94,5 @@ userSchema.methods.generateToken = function () {
   });
 };
 
-export const userMdoel = mongoose.model("Users", userSchema);
-export default userMdoel;
+export const userModel = mongoose.model("Users", userSchema);
+export default userModel;
