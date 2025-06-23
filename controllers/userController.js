@@ -1,10 +1,9 @@
 import userModel from "../models/userModel.js";
 import cloudinary from "cloudinary";
 import { getDataUri } from "../utils/features.js";
-import crypto from "crypto";
-import nodemailer from "nodemailer";
+import { generateAndSendOTP } from "../utils/otpUtils.js";
 
-export const registerController = async (req, res) => {
+export const requestRegisterController = async (req, res) => {
   try {
     const { name, email, password, address, city, country, phone, answer } =
       req.body;
@@ -42,10 +41,86 @@ export const registerController = async (req, res) => {
       country,
       phone,
       answer,
+      registExpiry : Date.now() + 24 * 60 * 60 * 1000,//24h
     });
+    const result = await generateAndSendOTP(user);
+    if (!result.success) {
+      return res
+        .status(500)
+        .send({
+          success: false,
+          message: "Error sending otp",
+          error: result.error,
+        });
+    }
+
     res.status(201).send({
       success: true,
-      message: "Registeration Success, please login",
+      message: "Registeration Success, please verify by enter the OTP in 24h or the request will be cancel",
+      user,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error In Register API",
+      error,
+    });
+  }
+};
+
+export const verifyregisterController = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    //validation
+    if (!email || !otp) {
+      return res.status(500).send({
+        success: false,
+        message: "Please Add Email OR otp",
+      });
+    }
+
+    const user = await userModel.findOne({ email: email });
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "Incorect email or requesy are expire",
+      });
+    }
+    console.log(!user, email, otp);
+
+    
+    //check for request
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "Request are not found",
+      });
+    }
+    
+    //check status
+    if (user.status=="verified") {
+      return res.status(400).send({
+        success: false,
+        message: "verify process are complete, please login",
+      });
+    }
+    
+    //check OTP
+    const isMatchOTP = await user.compareOTP(otp);
+    if ( !isMatchOTP) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+    user.status = "verified";
+    user.otp = undefined;
+    user.OTPExpiry = undefined;
+    await user.save();
+    res.status(201).send({
+      success: true,
+      message: "verify Success, please login",
       user,
     });
   } catch (error) {
@@ -76,6 +151,13 @@ export const loginController = async (req, res) => {
       return res.status(404).send({
         success: false,
         message: "Incorrect email or password",
+      });
+    }
+    //check verify
+    if (user.status=="pending") {
+      return res.status(500).send({
+        success: false,
+        message: "Account are NOT verify, please verify acount first",
       });
     }
     //check pass
@@ -260,37 +342,34 @@ export const requestPasswordResetController = async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).send({ success: false, message: "Email required" });
+      return res
+        .status(400)
+        .send({ success: false, message: "Email required" });
     }
     const user = await userModel.findOne({ email });
     if (!user) {
-      return res.status(404).send({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .send({ success: false, message: "User not found" });
     }
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    user.resetOTP = otp;
-    user.resetOTPExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
-    await user.save();
 
-    // Send OTP via email (configure transporter as needed)
-    const transporter = nodemailer.createTransport({
-      // Configure your SMTP
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: "Your OTP for Password Reset",
-      text: `Your OTP is ${otp}`,
-    });
+    const result = await generateAndSendOTP(user);
+    if (!result.success) {
+      return res
+        .status(500)
+        .send({
+          success: false,
+          message: "Error sending otp",
+          error: result.error,
+        });
+    }
 
     res.status(200).send({ success: true, message: "OTP sent to email" });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, message: "Error sending OTP", error });
+    res
+      .status(500)
+      .send({ success: false, message: "Error sending OTP", error });
   }
 };
 
@@ -299,19 +378,35 @@ export const passwordResetController = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
     if (!email || !otp || !newPassword) {
-      return res.status(400).send({ success: false, message: "All fields required" });
+      return res
+        .status(400)
+        .send({ success: false, message: "All fields required" });
     }
-    const user = await userModel.findOne({ email, resetOTP: otp });
-    if (!user || !user.resetOTPExpiry || user.resetOTPExpiry < Date.now()) {
-      return res.status(400).send({ success: false, message: "Invalid or expired OTP" });
+
+    const user = await userModel.findOne({ email: email });
+    const isMatchOTP = await user.compareOTP(otp);
+
+    if (
+      !user ||
+      !user.OTPExpiry ||
+      user.OTPExpiry < Date.now() ||
+      !isMatchOTP
+    ) {
+      return res
+        .status(400)
+        .send({ success: false, message: "Invalid or expired OTP" });
     }
     user.password = newPassword;
-    user.resetOTP = undefined;
-    user.resetOTPExpiry = undefined;
+    user.otp = undefined;
+    user.OTPExpiry = undefined;
     await user.save();
-    res.status(200).send({ success: true, message: "Password reset successful" });
+    res
+      .status(200)
+      .send({ success: true, message: "Password reset successful" });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, message: "Error resetting password", error });
+    res
+      .status(500)
+      .send({ success: false, message: "Error resetting password", error });
   }
 };

@@ -5,10 +5,11 @@ import {
   logoutController,
   requestPasswordResetController,
   passwordResetController,
-  registerController,
   udpatePasswordController,
   updateProfileController,
   updateProfilePicController,
+  requestRegisterController,
+  verifyregisterController,
 } from "../controllers/userController.js";
 import { isAuth } from "../middlewares/authMiddleware.js";
 import { singleUpload } from "../middlewares/multer.js";
@@ -27,8 +28,12 @@ const limiter = rateLimit({
 const router = express.Router();
 
 //routes
-// register
-router.post("/register", limiter, registerController);
+// register request 
+router.post("/request-register", limiter, requestRegisterController);
+
+//register
+router.post("/register", limiter, verifyregisterController);
+
 
 //login
 router.post("/login", limiter, loginController);
@@ -51,7 +56,7 @@ router.put("/update-picture", isAuth, singleUpload, updateProfilePicController);
 // Request OTP for password reset
 router.post("/request-reset-password", requestPasswordResetController);
 
-// FORGOT PASSWORD
+// reset PASSWORD
 router.post("/reset-password", passwordResetController);
 
 //export
