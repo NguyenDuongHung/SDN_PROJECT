@@ -8,6 +8,7 @@ import {
   paymetsController,
   singleOrderDetrailsController,
   cancelOrderController,
+  updatePaymentStatusController,
 } from "../controllers/orderController.js";
 
 const router = express.Router();
@@ -26,6 +27,9 @@ router.get("/my-orders/:id", isAuth, singleOrderDetrailsController);
 
 // acceipt payments
 router.post("/payments", isAuth, paymetsController);
+
+// update payment status
+router.put("/update-payment-status", isAuth, updatePaymentStatusController);
 
 /// ======== ADMIN PART ============
 // get all order
