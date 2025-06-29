@@ -13,7 +13,7 @@ import mongoose from "mongoose";
 import connectDB from "./config/db.js";
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {

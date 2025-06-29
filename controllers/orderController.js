@@ -15,9 +15,27 @@ export const createOrderController = async (req, res) => {
       shippingCharges,
       totalAmount,
     } = req.body;
-    //valdiation
-    // create order
-    await orderModel.create({
+
+    // Validate stock availability before creating order
+    for (let i = 0; i < orderItems.length; i++) {
+      const product = await productModel.findById(orderItems[i].product);
+      if (!product) {
+        return res.status(404).send({
+          success: false,
+          message: `Product not found: ${orderItems[i].product}`,
+        });
+      }
+      
+      if (product.stock < orderItems[i].quantity) {
+        return res.status(400).send({
+          success: false,
+          message: `Insufficient stock for product: ${product.name}. Available: ${product.stock}, Requested: ${orderItems[i].quantity}`,
+        });
+      }
+    }
+
+    // Create order without decreasing stock yet
+    const order = await orderModel.create({
       user: req.user._id,
       shippingInfo,
       orderItems,
@@ -29,16 +47,10 @@ export const createOrderController = async (req, res) => {
       totalAmount,
     });
 
-    // stock update
-    for (let i = 0; i < orderItems.length; i++) {
-      // find product
-      const product = await productModel.findById(orderItems[i].product);
-      product.stock -= orderItems[i].quantity;
-      await product.save();
-    }
     res.status(201).send({
       success: true,
       message: "Order Placed Successfully",
+      orderId: order._id,
     });
   } catch (error) {
     console.log(error);
@@ -115,29 +127,182 @@ export const singleOrderDetrailsController = async (req, res) => {
 // ACCEPT PAYMENTS
 export const paymetsController = async (req, res) => {
   try {
-    // get ampunt
-    const { totalAmount } = req.body;
-    // validation
+    const { totalAmount, orderId } = req.body;
+
+    // Validation
     if (!totalAmount) {
-      return res.status(404).send({
+      return res.status(400).send({
         success: false,
-        message: "Total Amount is require",
+        message: "Total Amount is required",
       });
     }
-    const { client_secret } = await stripe.paymentIntents.create({
+    if (!orderId) {
+      return res.status(400).send({
+        success: false,
+        message: "Order ID is required",
+      });
+    }
+
+    // Find the order
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Verify the order belongs to the user
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).send({
+        success: false,
+        message: "You can only pay for your own orders",
+      });
+    }
+
+    // Check if payment is already complete
+    if (order.paymentStatus === "complete") {
+      return res.status(400).send({
+        success: false,
+        message: "Payment already completed for this order",
+      });
+    }
+
+    // Verify amount matches
+    if (order.totalAmount !== totalAmount) {
+      return res.status(400).send({
+        success: false,
+        message: "Amount doesn't match order total",
+      });
+    }
+
+    // Create payment intent with order metadata
+    const paymentIntent = await stripe.paymentIntents.create({
       amount: Number(totalAmount * 100),
       currency: "usd",
+      metadata: {
+        orderId: orderId,
+        userId: req.user._id.toString(),
+      },
     });
+
+    // Update order with payment intent info
+    order.paymentInfo = {
+      id: paymentIntent.id,
+      status: "created",
+    };
+    order.paymentStatus = "pending";
+    await order.save();
+
     res.status(200).send({
       success: true,
-      client_secret,
+      client_secret: paymentIntent.client_secret,
+      orderId: orderId,
+      paymentStatus: order.paymentStatus,
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Error In Get UPDATE Products API",
-      error,
+      message: "Error in payment API",
+      error: error.message,
+    });
+  }
+};
+
+// UPDATE PAYMENT STATUS (called from frontend after successful payment)
+export const updatePaymentStatusController = async (req, res) => {
+  try {
+    const { orderId, paymentIntentId } = req.body;
+
+    // Validation
+    if (!orderId || !paymentIntentId) {
+      return res.status(400).send({
+        success: false,
+        message: "Order ID and Payment Intent ID are required",
+      });
+    }
+
+    // Find the order
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).send({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Verify the order belongs to the user
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res.status(403).send({
+        success: false,
+        message: "You can only update your own orders",
+      });
+    }
+
+    // Verify payment intent matches
+    if (order.paymentInfo.id !== paymentIntentId) {
+      return res.status(400).send({
+        success: false,
+        message: "Payment intent ID doesn't match",
+      });
+    }
+
+    // Check if payment is already complete
+    if (order.paymentStatus === "complete") {
+      return res.status(400).send({
+        success: false,
+        message: "Payment already completed for this order",
+      });
+    }
+
+    // Validate stock availability before confirming payment
+    for (let i = 0; i < order.orderItems.length; i++) {
+      const product = await productModel.findById(order.orderItems[i].product);
+      if (!product) {
+        return res.status(404).send({
+          success: false,
+          message: `Product not found: ${order.orderItems[i].product}`,
+        });
+      }
+      
+      if (product.stock < order.orderItems[i].quantity) {
+        return res.status(400).send({
+          success: false,
+          message: `Insufficient stock for product: ${product.name}. Available: ${product.stock}, Requested: ${order.orderItems[i].quantity}`,
+        });
+      }
+    }
+
+    // Update payment status
+    order.paymentStatus = "complete";
+    order.paidAt = new Date();
+    order.paymentInfo.status = "succeeded";
+    await order.save();
+
+    // Decrease stock only after payment is confirmed
+    for (let i = 0; i < order.orderItems.length; i++) {
+      const product = await productModel.findById(order.orderItems[i].product);
+      product.stock -= order.orderItems[i].quantity;
+      await product.save();
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Payment status updated successfully",
+      order: {
+        _id: order._id,
+        paymentStatus: order.paymentStatus,
+        paidAt: order.paidAt,
+        totalAmount: order.totalAmount,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error updating payment status",
+      error: error.message,
     });
   }
 };
