@@ -17,18 +17,6 @@ const userSchema = new mongoose.Schema(
       required: [true, "password is required"],
       minLength: [6, "password length should be greadter then 6 character"],
     },
-    address: {
-      type: String,
-      required: [true, "address is required"],
-    },
-    city: {
-      type: String,
-      required: [true, "city name is required"],
-    },
-    country: {
-      type: String,
-      required: [true, "country name is required"],
-    },
     phone: {
       type: String,
       required: [true, "phone no is required"],
@@ -41,18 +29,14 @@ const userSchema = new mongoose.Schema(
         type: String,
       },
     },
-    answer: {
-      type: String,
-      required: [true, "answer is required"],
-    },
     role: {
       type: String,
       default: "user",
     },
-    status:{
+    status: {
       type: String,
-      enum: ['pending', 'verified'], 
-      default: 'pending',
+      enum: ["pending", "verified"],
+      default: "pending",
     },
     otp: {
       type: String,
@@ -60,10 +44,10 @@ const userSchema = new mongoose.Schema(
     OTPExpiry: {
       type: Date,
     },
-    registExpiry:{
-      type:Date,
-      expires: 0,//delete doc when otp time run out
-    }
+    registExpiry: {
+      type: Date,
+      expires: 0, //delete doc when otp time run out
+    },
   },
   { timestamps: true }
 );

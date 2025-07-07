@@ -5,19 +5,9 @@ import { generateAndSendOTP } from "../utils/otpUtils.js";
 
 export const requestRegisterController = async (req, res) => {
   try {
-    const { name, email, password, address, city, country, phone, answer } =
-      req.body;
+    const { name, email, password, phone } = req.body;
     // validation
-    if (
-      !name ||
-      !email ||
-      !password ||
-      !city ||
-      !address ||
-      !country ||
-      !phone ||
-      !answer
-    ) {
+    if (!name || !email || !password || !phone) {
       return res.status(500).send({
         success: false,
         message: "Please Provide All Fields",
@@ -36,27 +26,22 @@ export const requestRegisterController = async (req, res) => {
       name,
       email,
       password,
-      address,
-      city,
-      country,
       phone,
-      answer,
-      registExpiry : Date.now() + 24 * 60 * 60 * 1000,//24h
+      registExpiry: Date.now() + 24 * 60 * 60 * 1000, //24h
     });
     const result = await generateAndSendOTP(user);
     if (!result.success) {
-      return res
-        .status(500)
-        .send({
-          success: false,
-          message: "Error sending otp",
-          error: result.error,
-        });
+      return res.status(500).send({
+        success: false,
+        message: "Error sending otp",
+        error: result.error,
+      });
     }
 
     res.status(201).send({
       success: true,
-      message: "Registeration Success, please verify by enter the OTP in 24h or the request will be cancel",
+      message:
+        "Registeration Success, please verify by enter the OTP in 24h or the request will be cancel",
       user,
     });
   } catch (error) {
@@ -89,7 +74,6 @@ export const verifyregisterController = async (req, res) => {
     }
     console.log(!user, email, otp);
 
-    
     //check for request
     if (!user) {
       return res.status(404).send({
@@ -97,18 +81,18 @@ export const verifyregisterController = async (req, res) => {
         message: "Request are not found",
       });
     }
-    
+
     //check status
-    if (user.status=="verified") {
+    if (user.status == "verified") {
       return res.status(400).send({
         success: false,
         message: "verify process are complete, please login",
       });
     }
-    
+
     //check OTP
     const isMatchOTP = await user.compareOTP(otp);
-    if ( !isMatchOTP) {
+    if (!isMatchOTP) {
       return res.status(400).send({
         success: false,
         message: "Invalid OTP",
@@ -154,7 +138,7 @@ export const loginController = async (req, res) => {
       });
     }
     //check verify
-    if (user.status=="pending") {
+    if (user.status == "pending") {
       return res.status(500).send({
         success: false,
         message: "Account are NOT verify, please verify acount first",
@@ -229,13 +213,10 @@ export const logoutController = async (req, res) => {
 export const updateProfileController = async (req, res) => {
   try {
     const user = await userModel.findById(req.user._id);
-    const { name, email, address, city, country, phone } = req.body;
+    const { name, email, phone } = req.body;
     // validation + Update
     if (name) user.name = name;
     if (email) user.email = email;
-    if (address) user.address = address;
-    if (city) user.city = city;
-    if (country) user.country = country;
     if (phone) user.phone = phone;
     //save user
     await user.save();
@@ -339,13 +320,11 @@ export const requestPasswordResetController = async (req, res) => {
 
     const result = await generateAndSendOTP(user);
     if (!result.success) {
-      return res
-        .status(500)
-        .send({
-          success: false,
-          message: "Error sending otp",
-          error: result.error,
-        });
+      return res.status(500).send({
+        success: false,
+        message: "Error sending otp",
+        error: result.error,
+      });
     }
 
     res.status(200).send({ success: true, message: "OTP sent to email" });
