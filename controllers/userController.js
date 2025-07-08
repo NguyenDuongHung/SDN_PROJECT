@@ -5,9 +5,11 @@ import { generateAndSendOTP } from "../utils/otpUtils.js";
 
 export const requestRegisterController = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    console.log("req body", req.body);
+
+    const { name, email, password} = req.body;
     // validation
-    if (!name || !email || !password || !phone) {
+    if (!name || !email || !password) {
       return res.status(500).send({
         success: false,
         message: "Please Provide All Fields",
@@ -26,7 +28,6 @@ export const requestRegisterController = async (req, res) => {
       name,
       email,
       password,
-      phone,
       registExpiry: Date.now() + 24 * 60 * 60 * 1000, //24h
     });
     const result = await generateAndSendOTP(user);
@@ -101,6 +102,7 @@ export const verifyregisterController = async (req, res) => {
     user.status = "verified";
     user.otp = undefined;
     user.OTPExpiry = undefined;
+    user.registExpiry = undefined;
     await user.save();
     res.status(201).send({
       success: true,
