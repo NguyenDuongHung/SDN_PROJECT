@@ -31,10 +31,10 @@ router.get("/view", limiter, isAuth, viewCartController);
 router.put("/update", limiter, isAuth, updateCartItemController);
 
 // Remove item from cart
-router.delete("/remove/:productId", limiter, isAuth, removeFromCartController);
+router.delete("/remove/", limiter, isAuth, removeFromCartController);
 
 // Clear cart
 router.delete("/clear", limiter, isAuth, clearCartController);
 
 //export
-export default router; 
+export default router;

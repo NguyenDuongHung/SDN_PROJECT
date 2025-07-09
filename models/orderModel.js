@@ -79,15 +79,14 @@ const orderSchema = new mongoose.Schema(
     },
     orderStatus: {
       type: String,
-      enum: ["processing", "shipped", "deliverd","cancel"],
+      enum: ["processing", "shipped", "delivered", "cancel"],
       default: "processing",
     },
     deliverdAt: Date,
-    cancelInfo:
-      {
-        cancelAt:Date,
-        cancelReason:{type:String}
-      }
+    cancelInfo: {
+      cancelAt: Date,
+      cancelReason: { type: String },
+    },
   },
   { timestamps: true }
 );
