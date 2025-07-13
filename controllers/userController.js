@@ -7,7 +7,7 @@ export const requestRegisterController = async (req, res) => {
   try {
     console.log("req body", req.body);
 
-    const { name, email, password} = req.body;
+    const { name, email, password } = req.body;
     // validation
     if (!name || !email || !password) {
       return res.status(500).send({
@@ -141,7 +141,7 @@ export const loginController = async (req, res) => {
     }
     //check verify
     if (user.status == "pending") {
-      return res.status(500).send({
+      return res.status(401).send({
         success: false,
         message: "Account are NOT verify, please verify acount first",
       });
@@ -178,17 +178,17 @@ export const loginController = async (req, res) => {
 export const getUserProfileController = async (req, res) => {
   try {
     const user = await userModel.findById(req.user._id);
-    user.password = undefined;
+    user.password = undefined; //not send pass in the res
     res.status(200).send({
       success: true,
-      message: "USer Prfolie Fetched Successfully",
+      message: "USer profile Fetched Successfully",
       user,
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Error In PRofile API",
+      message: "Error In Profile API",
       error,
     });
   }
