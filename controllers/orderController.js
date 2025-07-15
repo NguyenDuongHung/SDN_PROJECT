@@ -25,7 +25,7 @@ export const createOrderController = async (req, res) => {
           message: `Product not found: ${orderItems[i].product}`,
         });
       }
-      
+
       if (product.stock < orderItems[i].quantity) {
         return res.status(400).send({
           success: false,
@@ -46,6 +46,12 @@ export const createOrderController = async (req, res) => {
       shippingCharges,
       totalAmount,
     });
+    // Decrease stock
+    for (let i = 0; i < order.orderItems.length; i++) {
+      const product = await productModel.findById(order.orderItems[i].product);
+      product.stock -= order.orderItems[i].quantity;
+      await product.save();
+    }
 
     res.status(201).send({
       success: true,
@@ -265,7 +271,7 @@ export const updatePaymentStatusController = async (req, res) => {
           message: `Product not found: ${order.orderItems[i].product}`,
         });
       }
-      
+
       if (product.stock < order.orderItems[i].quantity) {
         return res.status(400).send({
           success: false,
@@ -279,13 +285,6 @@ export const updatePaymentStatusController = async (req, res) => {
     order.paidAt = new Date();
     order.paymentInfo.status = "succeeded";
     await order.save();
-
-    // Decrease stock only after payment is confirmed
-    for (let i = 0; i < order.orderItems.length; i++) {
-      const product = await productModel.findById(order.orderItems[i].product);
-      product.stock -= order.orderItems[i].quantity;
-      await product.save();
-    }
 
     res.status(200).send({
       success: true,
