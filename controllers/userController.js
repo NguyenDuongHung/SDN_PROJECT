@@ -215,11 +215,9 @@ export const logoutController = async (req, res) => {
 export const updateProfileController = async (req, res) => {
   try {
     const user = await userModel.findById(req.user._id);
-    const { name, email, phone } = req.body;
+    const { name } = req.body;
     // validation + Update
     if (name) user.name = name;
-    if (email) user.email = email;
-    if (phone) user.phone = phone;
     //save user
     await user.save();
     res.status(200).send({
@@ -277,29 +275,33 @@ export const udpatePasswordController = async (req, res) => {
 export const updateProfilePicController = async (req, res) => {
   try {
     const user = await userModel.findById(req.user._id);
-    // file get from client photo
+
+    // Delete old image only if it exists
+    if (user.profilePic && user.profilePic.public_id) {
+      await cloudinary.uploader.destroy(user.profilePic.public_id);
+    }
+
+    // Upload new image
     const file = getDataUri(req.file);
-    // delete prev image
-    await cloudinary.v2.uploader.destroy(user.profilePic.public_id);
-    // update
-    const cdb = await cloudinary.v2.uploader.upload(file.content);
+    const cdb = await cloudinary.uploader.upload(file.content);
+
     user.profilePic = {
       public_id: cdb.public_id,
       url: cdb.secure_url,
     };
-    // save func
+
     await user.save();
 
     res.status(200).send({
       success: true,
-      message: "profile picture updated",
+      message: "Profile picture updated successfully",
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Error In update profile pic API",
-      error,
+      message: "Error updating profile picture",
+      error: error.message,
     });
   }
 };

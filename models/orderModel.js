@@ -86,7 +86,7 @@ const orderSchema = new mongoose.Schema(
       enum: ["processing", "shipped", "delivered", "cancel"],
       default: "processing",
     },
-    deliverdAt: Date,
+    deliveredAt: Date,
     cancelInfo: {
       cancelAt: Date,
       cancelReason: { type: String },

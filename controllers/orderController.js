@@ -342,12 +342,12 @@ export const changeOrderStatusController = async (req, res) => {
     }
     if (order.orderStatus === "processing") order.orderStatus = "shipped";
     else if (order.orderStatus === "shipped") {
-      order.orderStatus = "deliverd";
-      order.deliverdAt = Date.now();
+      order.orderStatus = "delivered";
+      order.deliveredAt = Date.now();
     } else {
       return res.status(500).send({
         success: false,
-        message: "order already deliverd",
+        message: "order already delivered",
       });
     }
     await order.save();
