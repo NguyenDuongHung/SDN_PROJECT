@@ -15,6 +15,10 @@ const orderSchema = new mongoose.Schema(
         type: String,
         required: [true, " country name is require"],
       },
+      phone: {
+        type: String,
+        required: [true, "phone number is required"],
+      },
     },
     orderItems: [
       {
